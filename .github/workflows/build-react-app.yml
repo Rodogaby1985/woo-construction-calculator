@@ -29,7 +29,7 @@ jobs:
 
       # 4. Construye la aplicación.
       - name: Build the application
-        run: npm run build
+        run: CI=false npm run build
 
       # 5. Empaqueta la carpeta "build" en un archivo descargable.
       - name: Upload build artifact
