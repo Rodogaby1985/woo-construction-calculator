@@ -1,0 +1,44 @@
+# Nombre del workflow que aparecerá en la pestaña "Actions"
+name: Build React Calculator
+
+# "Disparador": Esto le dice a GitHub que ejecute este workflow
+# cada vez que subas ("push") nuevo código a la rama "main".
+on:
+  push:
+    branches: [ "main" ]
+
+# "Trabajos": Aquí se definen las tareas que se van a realizar.
+jobs:
+  # Nombramos nuestro trabajo "build"
+  build:
+    # Le decimos a GitHub que use un servidor virtual con Ubuntu (Linux)
+    runs-on: ubuntu-latest
+
+    # "Pasos": La secuencia de comandos que se ejecutarán.
+    steps:
+      # 1. Descarga tu código del repositorio al servidor virtual.
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      # 2. Instala Node.js en el servidor virtual (versión 18).
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      # 3. Instala todas las dependencias (como en tu PC).
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Construye la aplicación para producción (como en tu PC).
+      - name: Build the application
+        run: npm run build
+
+      # 5. Empaqueta la carpeta "build" resultante en un archivo descargable.
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Nombre del archivo que podrás descargar.
+          name: calculadora-build
+          # La carpeta que queremos empaquetar.
+          path: build/
