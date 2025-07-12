@@ -1,12 +1,12 @@
 # Nombre del workflow que aparecerá en la pestaña "Actions"
 name: Build React Calculator
 
-# "Disparador": Se ejecuta cada vez que subes código a la rama "main".
+# Se ejecuta cada vez que subes código a la rama "main".
 on:
   push:
     branches: [ "main" ]
 
-# "Trabajos": Las tareas a realizar.
+# Las tareas a realizar.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,15 +16,13 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      # 2. Instala Node.js.
+      # 2. Instala Node.js (Sin caché, para evitar errores).
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18.x'
-          # Añadimos caché para que las futuras ejecuciones sean más rápidas
-          cache: 'npm'
 
-      # 3. Instala TODAS las dependencias usando "npm install".
+      # 3. Instala TODAS las dependencias.
       #    Ahora que el package.json está corregido, esto funcionará.
       - name: Install dependencies
         run: npm install
