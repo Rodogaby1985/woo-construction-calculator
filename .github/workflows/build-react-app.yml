@@ -26,11 +26,11 @@ jobs:
         with:
           node-version: '18.x'
 
-      # 3. Instala todas las dependencias (como en tu PC).
-      - name: Install dependencies
-        run: npm install
+      # 3. Instala TODAS las dependencias (la corrección está aquí).
+      - name: Install all dependencies
+        run: npm ci
 
-      # 4. Construye la aplicación para producción (como en tu PC).
+      # 4. Construye la aplicación para producción.
       - name: Build the application
         run: npm run build
 
