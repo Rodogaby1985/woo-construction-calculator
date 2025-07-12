@@ -1,44 +1,41 @@
 # Nombre del workflow que aparecerá en la pestaña "Actions"
 name: Build React Calculator
 
-# "Disparador": Esto le dice a GitHub que ejecute este workflow
-# cada vez que subas ("push") nuevo código a la rama "main".
+# "Disparador": Se ejecuta cada vez que subes código a la rama "main".
 on:
   push:
     branches: [ "main" ]
 
-# "Trabajos": Aquí se definen las tareas que se van a realizar.
+# "Trabajos": Las tareas a realizar.
 jobs:
-  # Nombramos nuestro trabajo "build"
   build:
-    # Le decimos a GitHub que use un servidor virtual con Ubuntu (Linux)
     runs-on: ubuntu-latest
 
-    # "Pasos": La secuencia de comandos que se ejecutarán.
     steps:
-      # 1. Descarga tu código del repositorio al servidor virtual.
+      # 1. Descarga tu código del repositorio.
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      # 2. Instala Node.js en el servidor virtual (versión 18).
+      # 2. Instala Node.js.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18.x'
+          # Añadimos caché para que las futuras ejecuciones sean más rápidas
+          cache: 'npm'
 
-      # 3. Instala TODAS las dependencias (la corrección está aquí).
-      - name: Install all dependencies
-        run: npm ci
+      # 3. Instala TODAS las dependencias usando "npm install".
+      #    Ahora que el package.json está corregido, esto funcionará.
+      - name: Install dependencies
+        run: npm install
 
-      # 4. Construye la aplicación para producción.
+      # 4. Construye la aplicación.
       - name: Build the application
         run: npm run build
 
-      # 5. Empaqueta la carpeta "build" resultante en un archivo descargable.
+      # 5. Empaqueta la carpeta "build" en un archivo descargable.
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          # Nombre del archivo que podrás descargar.
           name: calculadora-build
-          # La carpeta que queremos empaquetar.
           path: build/
