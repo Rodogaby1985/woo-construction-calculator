@@ -7,15 +7,14 @@ const WallCalculatorResults = ({ walls }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
-  // --- LÓGICA DE CÁLCULO ---
-  // Usamos useMemo para evitar recalcular en cada renderizado si los 'walls' no cambian.
+  // --- LÓGICA DE CÁLCULO (sin cambios) ---
   const calculations = useMemo(() => {
     const calculateWallArea = (wall) => {
-      const wallArea = (wall.height || 0) * (wall.width || 0);
+      const wallArea = (parseFloat(wall.height) || 0) * (parseFloat(wall.width) || 0);
       const openingsArea = wall.openings?.reduce((total, opening) => {
-        return total + ((opening.height || 0) * (opening.width || 0));
+        return total + ((parseFloat(opening.height) || 0) * (parseFloat(opening.width) || 0));
       }, 0) || 0;
-      return Math.max(0, wallArea - openingsArea); // Asegura que no sea negativo
+      return Math.max(0, wallArea - openingsArea);
     };
 
     let totalArea = 0;
@@ -27,33 +26,29 @@ const WallCalculatorResults = ({ walls }) => {
     walls.forEach(wall => {
       const area = calculateWallArea(wall);
       totalArea += area;
-
-      // Cálculo ladrillos dobles
+      const wallHeight = parseFloat(wall.height) || 0;
+      
       const brickArea = config.BRICK_DIMENSIONS.DOUBLE.length * config.BRICK_DIMENSIONS.DOUBLE.height;
-      rawDoubleBricks += area / brickArea;
+      if (brickArea > 0) rawDoubleBricks += area / brickArea;
 
-      // Cálculo ladrillos simples
-      const wallHeight = wall.height || 0;
-      const heightBricks = wallHeight / config.BRICK_DIMENSIONS.SINGLE.width;
-      const openingBricks = wall.openings?.reduce((total, opening) => {
-        return total + ((opening.height || 0) / config.BRICK_DIMENSIONS.SINGLE.width);
-      }, 0) || 0;
-      rawSingleBricks += heightBricks + openingBricks;
+      if (config.BRICK_DIMENSIONS.SINGLE.width > 0) {
+          const heightBricks = wallHeight / config.BRICK_DIMENSIONS.SINGLE.width;
+          const openingBricks = wall.openings?.reduce((total, opening) => {
+            return total + ((parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.width);
+          }, 0) || 0;
+          rawSingleBricks += heightBricks + openingBricks;
+      }
 
-      // Cálculo para perfiles
-      totalPerimeter += (wall.width || 0);
+      totalPerimeter += (parseFloat(wall.width) || 0);
       maxWallHeight = Math.max(maxWallHeight, wallHeight);
     });
 
-    // Aplicar 10% de desperdicio y redondear hacia arriba
     const finalDoubleBricks = Math.ceil(rawDoubleBricks * 1.1);
     const finalSingleBricks = Math.ceil(rawSingleBricks * 1.1);
     
-    // Packs de venta
     const packsDoubleBricks = Math.ceil(finalDoubleBricks / config.PACK_SIZES.DOUBLE);
     const packsSingleBricks = Math.ceil(finalSingleBricks / config.PACK_SIZES.SINGLE);
 
-    // Perfiles y Escuadras
     const pgc70Needed = (totalPerimeter / 0.6) * maxWallHeight;
     const pgc70Profiles = Math.ceil(pgc70Needed / 6);
     const pgu100Profiles = Math.ceil((totalPerimeter * 2) / 6);
@@ -71,27 +66,67 @@ const WallCalculatorResults = ({ walls }) => {
     };
   }, [walls]);
 
+  // --- LÓGICA PARA GENERAR EL ENLACE DEL CARRITO (¡LA NUEVA MAGIA!) ---
+  const generateCartLink = () => {
+    // Valida que se hayan seleccionado los colores si hay ladrillos calculados
+    if (calculations.totalDoubleBricks > 0 && !selectedDoubleBrickColorId) {
+      alert('Por favor, selecciona un color para los Ladrillos Dobles.');
+      return null;
+    }
+    if (calculations.totalSingleBricks > 0 && !selectedSingleBrickColorId) {
+      alert('Por favor, selecciona un color para los Ladrillos Simples.');
+      return null;
+    }
 
-  // --- LÓGICA PARA AÑADIR AL CARRITO ---
-  const addToCart = async (productId, quantity, redirectOnSuccess = true) => {
-    // ... (La función addToCart se mantiene igual, pero ahora usará los IDs desde `config`)
-    // Para brevedad, no la repetiré aquí, pero debe estar en tu componente.
-    // Solo asegúrate de que no use `alert()` sino un sistema de notificaciones más moderno si es posible.
-    console.log(`Adding to cart: ProductID=${productId}, Quantity=${quantity}`);
-    // Aquí iría la lógica de fetch a WooCommerce
-  };
-  
-  const handleAddAllToCart = async () => {
-    // Lógica para añadir todo al carrito
+    const baseUrl = 'https://blockplas.com.ar/cart/';
+    const params = new URLSearchParams();
+
+    // Añadir productos al enlace
+    if (calculations.totalDoubleBricks > 0) {
+      params.append('add-to-cart', selectedDoubleBrickColorId);
+      params.append('quantity', calculations.totalDoubleBricks);
+    }
+    if (calculations.totalSingleBricks > 0) {
+      params.append('add-to-cart', selectedSingleBrickColorId);
+      params.append('quantity', calculations.totalSingleBricks);
+    }
+    if (calculations.pgc70Profiles > 0) {
+      params.append('add-to-cart', config.WOOCOMMERCE_IDS.PGC70);
+      params.append('quantity', calculations.pgc70Profiles);
+    }
+    if (calculations.pgu100Profiles > 0) {
+      params.append('add-to-cart', config.WOOCOMMERCE_IDS.PGU100);
+      params.append('quantity', calculations.pgu100Profiles);
+    }
+    if (calculations.escuadras > 0) {
+      params.append('add-to-cart', config.WOOCOMMERCE_IDS.ESCUADRA);
+      params.append('quantity', calculations.escuadras);
+    }
+
+    const queryString = params.toString();
+    if (!queryString) {
+      alert('No hay productos calculados para añadir al carrito.');
+      return null;
+    }
+
+    return `${baseUrl}?${queryString}`;
   };
 
+  const handleAddAllToCartClick = (event) => {
+    const cartLink = generateCartLink();
+    if (!cartLink) {
+      // Si el enlace no se pudo generar (por falta de selección de color),
+      // prevenimos que el enlace vacío funcione.
+      event.preventDefault();
+    }
+  };
 
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
       <div className="space-y-4">
-        {/* Resumen */}
+        {/* ... (el resto del JSX de resultados se mantiene igual) ... */}
         <div className="grid grid-cols-2 gap-4 text-center bg-gray-100 p-4 rounded-lg">
           <div>
             <p className="text-sm text-gray-600">Área Neta a Cubrir</p>
@@ -103,7 +138,6 @@ const WallCalculatorResults = ({ walls }) => {
           </div>
         </div>
 
-        {/* Lista de materiales */}
         <div className="space-y-3">
           {/* Ladrillos Dobles */}
           <div className="p-4 border rounded-lg">
@@ -146,14 +180,14 @@ const WallCalculatorResults = ({ walls }) => {
           </div>
         </div>
 
-        {/* Botón de acción */}
-        <button
-          onClick={handleAddAllToCart}
-          className="w-full mt-6 bg-green-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-md disabled:bg-gray-400"
-          disabled={!calculations.totalArea || (calculations.totalDoubleBricks > 0 && !selectedDoubleBrickColorId) || (calculations.totalSingleBricks > 0 && !selectedSingleBrickColorId)}
+        {/* Botón de acción final - AHORA ES UN ENLACE (<a>) */}
+        <a
+          href={generateCartLink() || '#'}
+          onClick={handleAddAllToCartClick}
+          className="block text-center w-full mt-6 bg-green-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-md"
         >
           Añadir todo al carrito
-        </button>
+        </a>
       </div>
     </div>
   );
