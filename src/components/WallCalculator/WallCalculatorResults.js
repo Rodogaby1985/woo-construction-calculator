@@ -66,67 +66,11 @@ const WallCalculatorResults = ({ walls }) => {
     };
   }, [walls]);
 
-  // --- LÓGICA PARA GENERAR EL ENLACE DEL CARRITO (¡LA NUEVA MAGIA!) ---
-  const generateCartLink = () => {
-    // Valida que se hayan seleccionado los colores si hay ladrillos calculados
-    if (calculations.totalDoubleBricks > 0 && !selectedDoubleBrickColorId) {
-      alert('Por favor, selecciona un color para los Ladrillos Dobles.');
-      return null;
-    }
-    if (calculations.totalSingleBricks > 0 && !selectedSingleBrickColorId) {
-      alert('Por favor, selecciona un color para los Ladrillos Simples.');
-      return null;
-    }
-
-    const baseUrl = 'https://blockplas.com.ar/cart/';
-    const params = new URLSearchParams();
-
-    // Añadir productos al enlace
-    if (calculations.totalDoubleBricks > 0) {
-      params.append('add-to-cart', selectedDoubleBrickColorId);
-      params.append('quantity', calculations.totalDoubleBricks);
-    }
-    if (calculations.totalSingleBricks > 0) {
-      params.append('add-to-cart', selectedSingleBrickColorId);
-      params.append('quantity', calculations.totalSingleBricks);
-    }
-    if (calculations.pgc70Profiles > 0) {
-      params.append('add-to-cart', config.WOOCOMMERCE_IDS.PGC70);
-      params.append('quantity', calculations.pgc70Profiles);
-    }
-    if (calculations.pgu100Profiles > 0) {
-      params.append('add-to-cart', config.WOOCOMMERCE_IDS.PGU100);
-      params.append('quantity', calculations.pgu100Profiles);
-    }
-    if (calculations.escuadras > 0) {
-      params.append('add-to-cart', config.WOOCOMMERCE_IDS.ESCUADRA);
-      params.append('quantity', calculations.escuadras);
-    }
-
-    const queryString = params.toString();
-    if (!queryString) {
-      alert('No hay productos calculados para añadir al carrito.');
-      return null;
-    }
-
-    return `${baseUrl}?${queryString}`;
-  };
-
-  const handleAddAllToCartClick = (event) => {
-    const cartLink = generateCartLink();
-    if (!cartLink) {
-      // Si el enlace no se pudo generar (por falta de selección de color),
-      // prevenimos que el enlace vacío funcione.
-      event.preventDefault();
-    }
-  };
-
-  // --- RENDERIZADO DEL COMPONENTE ---
+  // --- RENDERIZADO DEL COMPONENTE CON BOTONES INDIVIDUALES ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
       <div className="space-y-4">
-        {/* ... (el resto del JSX de resultados se mantiene igual) ... */}
         <div className="grid grid-cols-2 gap-4 text-center bg-gray-100 p-4 rounded-lg">
           <div>
             <p className="text-sm text-gray-600">Área Neta a Cubrir</p>
@@ -140,57 +84,77 @@ const WallCalculatorResults = ({ walls }) => {
 
         <div className="space-y-3">
           {/* Ladrillos Dobles */}
-          <div className="p-4 border rounded-lg">
-            <p className="font-semibold">Ladrillos Dobles</p>
-            <p className="text-xl font-bold">{calculations.totalDoubleBricks} unidades ({calculations.packsDoubleBricks} packs)</p>
-            <select
-              value={selectedDoubleBrickColorId}
-              onChange={(e) => setSelectedDoubleBrickColorId(e.target.value)}
-              className="w-full mt-2 p-2 border rounded-md"
-            >
-              {config.COLOR_OPTIONS.DOUBLE_BRICKS.map(color => (
-                <option key={color.id || 'default-double'} value={color.id}>{color.name}</option>
-              ))}
-            </select>
-          </div>
+          {calculations.totalDoubleBricks > 0 && (
+            <div className="p-4 border rounded-lg">
+              <p className="font-semibold">Ladrillos Dobles</p>
+              <p className="text-xl font-bold">{calculations.totalDoubleBricks} unidades</p>
+              <select value={selectedDoubleBrickColorId} onChange={(e) => setSelectedDoubleBrickColorId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
+                {config.COLOR_OPTIONS.DOUBLE_BRICKS.map(color => (
+                  <option key={color.id || 'default-double'} value={color.id}>{color.name}</option>
+                ))}
+              </select>
+              <a href={selectedDoubleBrickColorId ? `https://blockplas.com.ar/cart/?add-to-cart=${selectedDoubleBrickColorId}&quantity=${calculations.totalDoubleBricks}` : '#'}
+                 onClick={(e) => !selectedDoubleBrickColorId && e.preventDefault()}
+                 className={`block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${selectedDoubleBrickColorId ? 'bg-blue-700 text-white hover:bg-blue-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                Añadir Ladrillos Dobles
+              </a>
+            </div>
+          )}
 
           {/* Ladrillos Simples */}
-          <div className="p-4 border rounded-lg">
-            <p className="font-semibold">Ladrillos Simples</p>
-            <p className="text-xl font-bold">{calculations.totalSingleBricks} unidades ({calculations.packsSingleBricks} packs)</p>
-             <select
-              value={selectedSingleBrickColorId}
-              onChange={(e) => setSelectedSingleBrickColorId(e.target.value)}
-              className="w-full mt-2 p-2 border rounded-md"
-            >
-              {config.COLOR_OPTIONS.SINGLE_BRICKS.map(color => (
-                <option key={color.id || 'default-single'} value={color.id}>{color.name}</option>
-              ))}
-            </select>
-          </div>
+          {calculations.totalSingleBricks > 0 && (
+            <div className="p-4 border rounded-lg">
+              <p className="font-semibold">Ladrillos Simples</p>
+              <p className="text-xl font-bold">{calculations.totalSingleBricks} unidades</p>
+              <select value={selectedSingleBrickColorId} onChange={(e) => setSelectedSingleBrickColorId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
+                {config.COLOR_OPTIONS.SINGLE_BRICKS.map(color => (
+                  <option key={color.id || 'default-single'} value={color.id}>{color.name}</option>
+                ))}
+              </select>
+              <a href={selectedSingleBrickColorId ? `https://blockplas.com.ar/cart/?add-to-cart=${selectedSingleBrickColorId}&quantity=${calculations.totalSingleBricks}` : '#'}
+                 onClick={(e) => !selectedSingleBrickColorId && e.preventDefault()}
+                 className={`block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${selectedSingleBrickColorId ? 'bg-green-700 text-white hover:bg-green-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                Añadir Ladrillos Simples
+              </a>
+            </div>
+          )}
 
-          {/* Perfiles y Escuadras */}
-          <div className="p-4 border rounded-lg">
-            <p className="font-semibold">Estructura</p>
-            <ul className="list-disc list-inside text-gray-700">
-              <li><span className="font-bold">{calculations.pgc70Profiles}</span> perfiles PGC70</li>
-              <li><span className="font-bold">{calculations.pgu100Profiles}</span> perfiles PGU100</li>
-              <li><span className="font-bold">{calculations.escuadras}</span> escuadras de unión</li>
-            </ul>
-          </div>
+          {/* Perfiles y Escuadras (AHORA SEPARADOS) */}
+          {calculations.pgc70Profiles > 0 && (
+            <div className="p-4 border rounded-lg">
+                <p className="font-semibold">Perfiles PGC70</p>
+                <p><span className="font-bold">{calculations.pgc70Profiles}</span> unidades</p>
+                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.PGC70}&quantity=${calculations.pgc70Profiles}`}
+                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-purple-700 text-white hover:bg-purple-800 transition-colors shadow-sm">
+                  Añadir PGC70
+                </a>
+            </div>
+          )}
+          {calculations.pgu100Profiles > 0 && (
+            <div className="p-4 border rounded-lg">
+                <p className="font-semibold">Perfiles PGU100</p>
+                <p><span className="font-bold">{calculations.pgu100Profiles}</span> unidades</p>
+                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.PGU100}&quantity=${calculations.pgu100Profiles}`}
+                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-orange-700 text-white hover:bg-orange-800 transition-colors shadow-sm">
+                  Añadir PGU100
+                </a>
+            </div>
+          )}
+          {calculations.escuadras > 0 && (
+            <div className="p-4 border rounded-lg">
+                <p className="font-semibold">Escuadras de Unión</p>
+                <p><span className="font-bold">{calculations.escuadras}</span> unidades</p>
+                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.ESCUADRA}&quantity=${calculations.escuadras}`}
+                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-red-700 text-white hover:bg-red-800 transition-colors shadow-sm">
+                  Añadir Escuadras
+                </a>
+            </div>
+          )}
         </div>
-
-        {/* Botón de acción final - AHORA ES UN ENLACE (<a>) */}
-        <a
-          href={generateCartLink() || '#'}
-          onClick={handleAddAllToCartClick}
-          className="block text-center w-full mt-6 bg-green-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-md"
-        >
-          Añadir todo al carrito
-        </a>
       </div>
     </div>
   );
 };
 
 export default WallCalculatorResults;
+
