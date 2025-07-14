@@ -1,4 +1,4 @@
- import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 // Importa toda la configuración desde el archivo centralizado
 import * as config from '../../config';
 
@@ -7,7 +7,7 @@ const WallCalculatorResults = ({ walls }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
-  // --- LÓGICA DE CÁLCULO (sin cambios) ---
+  // --- LÓGICA DE CÁLCULO (CON REDONDEO INTELIGENTE) ---
   const calculations = useMemo(() => {
     const calculateWallArea = (wall) => {
       const wallArea = (parseFloat(wall.height) || 0) * (parseFloat(wall.width) || 0);
@@ -17,20 +17,16 @@ const WallCalculatorResults = ({ walls }) => {
       return Math.max(0, wallArea - openingsArea);
     };
 
-    let totalArea = 0;
-    let rawDoubleBricks = 0;
+    let totalNetArea = 0;
     let rawSingleBricks = 0;
     let totalPerimeter = 0;
     let maxWallHeight = 0;
 
     walls.forEach(wall => {
       const area = calculateWallArea(wall);
-      totalArea += area;
+      totalNetArea += area;
       const wallHeight = parseFloat(wall.height) || 0;
       
-      const brickArea = config.BRICK_DIMENSIONS.DOUBLE.length * config.BRICK_DIMENSIONS.DOUBLE.height;
-      if (brickArea > 0) rawDoubleBricks += area / brickArea;
-
       if (config.BRICK_DIMENSIONS.SINGLE.width > 0) {
           const heightBricks = wallHeight / config.BRICK_DIMENSIONS.SINGLE.width;
           const openingBricks = wall.openings?.reduce((total, opening) => {
@@ -43,30 +39,43 @@ const WallCalculatorResults = ({ walls }) => {
       maxWallHeight = Math.max(maxWallHeight, wallHeight);
     });
 
-    const finalDoubleBricks = Math.ceil(rawDoubleBricks * 1.1);
-    const finalSingleBricks = Math.ceil(rawSingleBricks * 1.1);
-    
-    const packsDoubleBricks = Math.ceil(finalDoubleBricks / config.PACK_SIZES.DOUBLE);
-    const packsSingleBricks = Math.ceil(finalSingleBricks / config.PACK_SIZES.SINGLE);
+    // --- CÁLCULOS FINALES CON LÓGICA DE REDONDEO INTELIGENTE ---
 
+    // 1. Ladrillos Dobles (se venden por m²)
+    const areaWithWaste = totalNetArea * 1.1;
+    const roundedM2 = Math.round(areaWithWaste);
+    // Verificación de seguridad: nos aseguramos de que al menos cubra el área neta.
+    const doubleBricksM2_to_sell = Math.max(roundedM2, Math.ceil(totalNetArea));
+    const totalDoubleBricks_for_display = doubleBricksM2_to_sell * config.PACK_SIZES.DOUBLE;
+
+    // 2. Ladrillos Simples (se venden por pack de 30)
+    const singleBricksWithWaste = rawSingleBricks * 1.1;
+    const packsWithWaste = singleBricksWithWaste / config.PACK_SIZES.SINGLE;
+    const roundedPacks = Math.round(packsWithWaste);
+    // Verificación de seguridad: nos aseguramos de que al menos cubra los ladrillos netos.
+    const minPacksNeeded = Math.ceil(rawSingleBricks / config.PACK_SIZES.SINGLE);
+    const singleBricksPacks_to_sell = Math.max(roundedPacks, minPacksNeeded);
+    const totalSingleBricks_for_display = singleBricksPacks_to_sell * config.PACK_SIZES.SINGLE;
+
+    // 3. Perfiles y Escuadras (se redondea al entero superior)
     const pgc70Needed = (totalPerimeter / 0.6) * maxWallHeight;
     const pgc70Profiles = Math.ceil(pgc70Needed / 6);
     const pgu100Profiles = Math.ceil((totalPerimeter * 2) / 6);
     const escuadras = Math.ceil(totalPerimeter / 0.6) * 2;
 
     return {
-      totalArea,
-      packsDoubleBricks,
-      totalDoubleBricks: packsDoubleBricks * config.PACK_SIZES.DOUBLE,
-      packsSingleBricks,
-      totalSingleBricks: packsSingleBricks * config.PACK_SIZES.SINGLE,
+      totalArea: totalNetArea,
+      doubleBricksM2: doubleBricksM2_to_sell,
+      singleBricksPacks: singleBricksPacks_to_sell,
+      totalDoubleBricks: totalDoubleBricks_for_display,
+      totalSingleBricks: totalSingleBricks_for_display,
       pgc70Profiles,
       pgu100Profiles,
       escuadras,
     };
   }, [walls]);
 
-  // --- RENDERIZADO DEL COMPONENTE CON BOTONES AJAX NATIVOS ---
+  // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
@@ -84,22 +93,22 @@ const WallCalculatorResults = ({ walls }) => {
 
         <div className="space-y-3">
           {/* Ladrillos Dobles */}
-          {calculations.totalDoubleBricks > 0 && (
+          {calculations.doubleBricksM2 > 0 && (
             <div className="p-4 border rounded-lg">
               <p className="font-semibold">Ladrillos Dobles</p>
-              <p className="text-xl font-bold">{calculations.totalDoubleBricks} unidades</p>
+              <p className="text-xl font-bold">{calculations.doubleBricksM2} m²</p>
+              <p className="text-sm text-gray-500">({calculations.totalDoubleBricks} ladrillos aprox.)</p>
+              
               <select value={selectedDoubleBrickColorId} onChange={(e) => setSelectedDoubleBrickColorId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
                 {config.COLOR_OPTIONS.DOUBLE_BRICKS.map(color => (
                   <option key={color.id || 'default-double'} value={color.id}>{color.name}</option>
                 ))}
               </select>
               <button
-                 // Atributos de datos que el JS de WooCommerce busca
-                 data-quantity={calculations.totalDoubleBricks}
+                 data-quantity={calculations.doubleBricksM2}
                  data-product_id={selectedDoubleBrickColorId}
-                 // Clases que el JS de WooCommerce y Flatsome buscan para activar el AJAX
                  className={`w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm add_to_cart_button ajax_add_to_cart ${selectedDoubleBrickColorId ? 'bg-blue-700 text-white hover:bg-blue-800' : 'bg-gray-300 text-gray-500'}`}
-                 disabled={!selectedDoubleBrickColorId} // Deshabilitamos el botón si no hay color
+                 disabled={!selectedDoubleBrickColorId}
               >
                 Añadir Ladrillos Dobles
               </button>
@@ -107,17 +116,19 @@ const WallCalculatorResults = ({ walls }) => {
           )}
 
           {/* Ladrillos Simples */}
-          {calculations.totalSingleBricks > 0 && (
+          {calculations.singleBricksPacks > 0 && (
             <div className="p-4 border rounded-lg">
               <p className="font-semibold">Ladrillos Simples</p>
-              <p className="text-xl font-bold">{calculations.totalSingleBricks} unidades</p>
+              <p className="text-xl font-bold">{calculations.singleBricksPacks} pack(s)</p>
+              <p className="text-sm text-gray-500">({calculations.totalSingleBricks} ladrillos aprox.)</p>
+
               <select value={selectedSingleBrickColorId} onChange={(e) => setSelectedSingleBrickColorId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
                 {config.COLOR_OPTIONS.SINGLE_BRICKS.map(color => (
                   <option key={color.id || 'default-single'} value={color.id}>{color.name}</option>
                 ))}
               </select>
               <button
-                 data-quantity={calculations.totalSingleBricks}
+                 data-quantity={calculations.singleBricksPacks}
                  data-product_id={selectedSingleBrickColorId}
                  className={`w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm add_to_cart_button ajax_add_to_cart ${selectedSingleBrickColorId ? 'bg-green-700 text-white hover:bg-green-800' : 'bg-gray-300 text-gray-500'}`}
                  disabled={!selectedSingleBrickColorId}
