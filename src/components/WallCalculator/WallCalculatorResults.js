@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+ import React, { useState, useMemo } from 'react';
 // Importa toda la configuración desde el archivo centralizado
 import * as config from '../../config';
 
@@ -66,7 +66,7 @@ const WallCalculatorResults = ({ walls }) => {
     };
   }, [walls]);
 
-  // --- RENDERIZADO DEL COMPONENTE CON BOTONES INDIVIDUALES ---
+  // --- RENDERIZADO DEL COMPONENTE CON BOTONES AJAX NATIVOS ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
@@ -93,11 +93,16 @@ const WallCalculatorResults = ({ walls }) => {
                   <option key={color.id || 'default-double'} value={color.id}>{color.name}</option>
                 ))}
               </select>
-              <a href={selectedDoubleBrickColorId ? `https://blockplas.com.ar/cart/?add-to-cart=${selectedDoubleBrickColorId}&quantity=${calculations.totalDoubleBricks}` : '#'}
-                 onClick={(e) => !selectedDoubleBrickColorId && e.preventDefault()}
-                 className={`block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${selectedDoubleBrickColorId ? 'bg-blue-700 text-white hover:bg-blue-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+              <button
+                 // Atributos de datos que el JS de WooCommerce busca
+                 data-quantity={calculations.totalDoubleBricks}
+                 data-product_id={selectedDoubleBrickColorId}
+                 // Clases que el JS de WooCommerce y Flatsome buscan para activar el AJAX
+                 className={`w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm add_to_cart_button ajax_add_to_cart ${selectedDoubleBrickColorId ? 'bg-blue-700 text-white hover:bg-blue-800' : 'bg-gray-300 text-gray-500'}`}
+                 disabled={!selectedDoubleBrickColorId} // Deshabilitamos el botón si no hay color
+              >
                 Añadir Ladrillos Dobles
-              </a>
+              </button>
             </div>
           )}
 
@@ -111,43 +116,55 @@ const WallCalculatorResults = ({ walls }) => {
                   <option key={color.id || 'default-single'} value={color.id}>{color.name}</option>
                 ))}
               </select>
-              <a href={selectedSingleBrickColorId ? `https://blockplas.com.ar/cart/?add-to-cart=${selectedSingleBrickColorId}&quantity=${calculations.totalSingleBricks}` : '#'}
-                 onClick={(e) => !selectedSingleBrickColorId && e.preventDefault()}
-                 className={`block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${selectedSingleBrickColorId ? 'bg-green-700 text-white hover:bg-green-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+              <button
+                 data-quantity={calculations.totalSingleBricks}
+                 data-product_id={selectedSingleBrickColorId}
+                 className={`w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm add_to_cart_button ajax_add_to_cart ${selectedSingleBrickColorId ? 'bg-green-700 text-white hover:bg-green-800' : 'bg-gray-300 text-gray-500'}`}
+                 disabled={!selectedSingleBrickColorId}
+              >
                 Añadir Ladrillos Simples
-              </a>
+              </button>
             </div>
           )}
 
-          {/* Perfiles y Escuadras (AHORA SEPARADOS) */}
+          {/* Perfiles y Escuadras */}
           {calculations.pgc70Profiles > 0 && (
             <div className="p-4 border rounded-lg">
                 <p className="font-semibold">Perfiles PGC70</p>
                 <p><span className="font-bold">{calculations.pgc70Profiles}</span> unidades</p>
-                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.PGC70}&quantity=${calculations.pgc70Profiles}`}
-                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-purple-700 text-white hover:bg-purple-800 transition-colors shadow-sm">
+                <button
+                   data-quantity={calculations.pgc70Profiles}
+                   data-product_id={config.WOOCOMMERCE_IDS.PGC70}
+                   className="w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-purple-700 text-white hover:bg-purple-800 transition-colors shadow-sm add_to_cart_button ajax_add_to_cart"
+                >
                   Añadir PGC70
-                </a>
+                </button>
             </div>
           )}
           {calculations.pgu100Profiles > 0 && (
             <div className="p-4 border rounded-lg">
                 <p className="font-semibold">Perfiles PGU100</p>
                 <p><span className="font-bold">{calculations.pgu100Profiles}</span> unidades</p>
-                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.PGU100}&quantity=${calculations.pgu100Profiles}`}
-                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-orange-700 text-white hover:bg-orange-800 transition-colors shadow-sm">
+                <button
+                   data-quantity={calculations.pgu100Profiles}
+                   data-product_id={config.WOOCOMMERCE_IDS.PGU100}
+                   className="w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-orange-700 text-white hover:bg-orange-800 transition-colors shadow-sm add_to_cart_button ajax_add_to_cart"
+                >
                   Añadir PGU100
-                </a>
+                </button>
             </div>
           )}
           {calculations.escuadras > 0 && (
             <div className="p-4 border rounded-lg">
                 <p className="font-semibold">Escuadras de Unión</p>
                 <p><span className="font-bold">{calculations.escuadras}</span> unidades</p>
-                <a href={`https://blockplas.com.ar/cart/?add-to-cart=${config.WOOCOMMERCE_IDS.ESCUADRA}&quantity=${calculations.escuadras}`}
-                   className="block text-center w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-red-700 text-white hover:bg-red-800 transition-colors shadow-sm">
+                <button
+                   data-quantity={calculations.escuadras}
+                   data-product_id={config.WOOCOMMERCE_IDS.ESCUADRA}
+                   className="w-full mt-3 py-2 rounded-lg text-sm font-semibold bg-red-700 text-white hover:bg-red-800 transition-colors shadow-sm add_to_cart_button ajax_add_to_cart"
+                >
                   Añadir Escuadras
-                </a>
+                </button>
             </div>
           )}
         </div>
@@ -157,4 +174,3 @@ const WallCalculatorResults = ({ walls }) => {
 };
 
 export default WallCalculatorResults;
-
