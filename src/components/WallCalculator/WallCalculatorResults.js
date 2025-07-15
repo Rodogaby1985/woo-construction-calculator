@@ -2,12 +2,11 @@ import React, { useState, useMemo } from 'react';
 // Importa toda la configuración desde el archivo centralizado
 import * as config from '../../config';
 
-const WallCalculatorResults = ({ walls }) => {
-  // Estados para almacenar el color seleccionado por el usuario
+// El componente ahora recibe 'numTerminations' como una prop desde App.js
+const WallCalculatorResults = ({ walls, numTerminations }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
-  // --- LÓGICA DE CÁLCULO (CON REDONDEO INTELIGENTE) ---
   const calculations = useMemo(() => {
     const calculateWallArea = (wall) => {
       const wallArea = (parseFloat(wall.height) || 0) * (parseFloat(wall.width) || 0);
@@ -18,46 +17,41 @@ const WallCalculatorResults = ({ walls }) => {
     };
 
     let totalNetArea = 0;
-    let rawSingleBricks = 0;
     let totalPerimeter = 0;
     let maxWallHeight = 0;
+    let totalOpeningVerticalJambsHeight = 0; // Altura total de los bordes verticales de las aberturas
 
     walls.forEach(wall => {
-      const area = calculateWallArea(wall);
-      totalNetArea += area;
-      const wallHeight = parseFloat(wall.height) || 0;
-      
-      if (config.BRICK_DIMENSIONS.SINGLE.width > 0) {
-          const heightBricks = wallHeight / config.BRICK_DIMENSIONS.SINGLE.width;
-          const openingBricks = wall.openings?.reduce((total, opening) => {
-            return total + ((parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.width);
-          }, 0) || 0;
-          rawSingleBricks += heightBricks + openingBricks;
-      }
-
+      totalNetArea += calculateWallArea(wall);
       totalPerimeter += (parseFloat(wall.width) || 0);
-      maxWallHeight = Math.max(maxWallHeight, wallHeight);
+      maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
+      // Sumamos la altura de ambos lados verticales de cada abertura
+      wall.openings?.forEach(opening => {
+        totalOpeningVerticalJambsHeight += (parseFloat(opening.height) || 0) * 2;
+      });
     });
 
-    // --- CÁLCULOS FINALES CON LÓGICA DE REDONDEO INTELIGENTE ---
+    // --- NUEVA LÓGICA DE CÁLCULO PARA LADRILLOS SIMPLES ---
+    // Se calculan los ladrillos necesarios para los extremos de pared expuestos.
+    const terminationBricksHeight = numTerminations * maxWallHeight;
+    // Se calculan los ladrillos para los bordes de las aberturas.
+    const openingJambsBricks = totalOpeningVerticalJambsHeight / config.BRICK_DIMENSIONS.SINGLE.width;
+    // Ladrillos simples totales necesarios (sin procesar).
+    const rawSingleBricks = (terminationBricksHeight / config.BRICK_DIMENSIONS.SINGLE.width) + openingJambsBricks;
 
-    // 1. Ladrillos Dobles (se venden por m²)
+    // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
     const roundedM2 = Math.round(areaWithWaste);
-    // Verificación de seguridad: nos aseguramos de que al menos cubra el área neta.
     const doubleBricksM2_to_sell = Math.max(roundedM2, Math.ceil(totalNetArea));
     const totalDoubleBricks_for_display = doubleBricksM2_to_sell * config.PACK_SIZES.DOUBLE;
 
-    // 2. Ladrillos Simples (se venden por pack de 30)
     const singleBricksWithWaste = rawSingleBricks * 1.1;
     const packsWithWaste = singleBricksWithWaste / config.PACK_SIZES.SINGLE;
     const roundedPacks = Math.round(packsWithWaste);
-    // Verificación de seguridad: nos aseguramos de que al menos cubra los ladrillos netos.
     const minPacksNeeded = Math.ceil(rawSingleBricks / config.PACK_SIZES.SINGLE);
     const singleBricksPacks_to_sell = Math.max(roundedPacks, minPacksNeeded);
     const totalSingleBricks_for_display = singleBricksPacks_to_sell * config.PACK_SIZES.SINGLE;
 
-    // 3. Perfiles y Escuadras (se redondea al entero superior)
     const pgc70Needed = (totalPerimeter / 0.6) * maxWallHeight;
     const pgc70Profiles = Math.ceil(pgc70Needed / 6);
     const pgu100Profiles = Math.ceil((totalPerimeter * 2) / 6);
@@ -73,7 +67,7 @@ const WallCalculatorResults = ({ walls }) => {
       pgu100Profiles,
       escuadras,
     };
-  }, [walls]);
+  }, [walls, numTerminations]); // Añadimos numTerminations a las dependencias del cálculo
 
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
@@ -118,7 +112,7 @@ const WallCalculatorResults = ({ walls }) => {
           {/* Ladrillos Simples */}
           {calculations.singleBricksPacks > 0 && (
             <div className="p-4 border rounded-lg">
-              <p className="font-semibold">Ladrillos Simples</p>
+              <p className="font-semibold">Ladrillos Simples (de terminación)</p>
               <p className="text-xl font-bold">{calculations.singleBricksPacks} pack(s)</p>
               <p className="text-sm text-gray-500">({calculations.totalSingleBricks} ladrillos aprox.)</p>
 
