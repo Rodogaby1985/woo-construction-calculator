@@ -1,9 +1,7 @@
 import React, { useState, useMemo } from 'react';
-// Importa toda la configuración desde el archivo centralizado
 import * as config from '../../config';
 
-// El componente ya NO necesita 'numTerminations'
-const WallCalculatorResults = ({ walls }) => {
+const WallCalculatorResults = ({ walls, numTerminations }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
@@ -26,8 +24,7 @@ const WallCalculatorResults = ({ walls }) => {
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
     });
 
-    // --- LÓGICA DE CÁLCULO CORREGIDA Y SIMPLIFICADA PARA LADRILLOS SIMPLES ---
-    
+    // --- LÓGICA DE CÁLCULO CORREGIDA PARA LADRILLOS SIMPLES ---
     // 1. Calcular la altura total de los bordes verticales de las aberturas.
     let totalOpeningVerticalJambsHeight = 0;
     walls.forEach(wall => {
@@ -36,13 +33,16 @@ const WallCalculatorResults = ({ walls }) => {
       });
     });
 
-    // 2. Aplicar la fórmula (altura / 0.08) a la altura MÁXIMA de la pared y a las aberturas.
-    //    Esto asume que los ladrillos simples se usan en los extremos y en las aberturas.
-    const wallEdgeBricks = maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.width;
-    const openingBricks = totalOpeningVerticalJambsHeight / config.BRICK_DIMENSIONS.SINGLE.width;
+    // 2. Calcular la altura total de las terminaciones de pared.
+    //    Si numTerminations es 0, esto será 0.
+    const totalTerminationHeight = numTerminations * maxWallHeight;
 
-    // 3. Sumar todo para obtener el total de ladrillos simples necesarios.
-    const rawSingleBricks = wallEdgeBricks + openingBricks;
+    // 3. Sumar todas las longitudes verticales que necesitan ladrillos simples.
+    const totalVerticalLengthForSimpleBricks = totalTerminationHeight + totalOpeningVerticalJambsHeight;
+
+    // 4. Aplicar la fórmula (longitud / alto del ladrillo) para obtener el total de ladrillos.
+    //    Si la longitud total es 0, el resultado será 0.
+    const rawSingleBricks = totalVerticalLengthForSimpleBricks / config.BRICK_DIMENSIONS.SINGLE.height;
 
     // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
@@ -72,9 +72,9 @@ const WallCalculatorResults = ({ walls }) => {
       pgu100Profiles,
       escuadras,
     };
-  }, [walls]); // Se elimina numTerminations de las dependencias
+  }, [walls, numTerminations]);
 
-  // --- RENDERIZADO DEL COMPONENTE (sin cambios en esta sección) ---
+  // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
@@ -115,6 +115,7 @@ const WallCalculatorResults = ({ walls }) => {
           )}
 
           {/* Ladrillos Simples */}
+          {/* Esta sección ahora solo se mostrará si el cálculo es mayor a 0 */}
           {calculations.singleBricksPacks > 0 && (
             <div className="p-4 border rounded-lg">
               <p className="font-semibold">Ladrillos Simples (de terminación)</p>
