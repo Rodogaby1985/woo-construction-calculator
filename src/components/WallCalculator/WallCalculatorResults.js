@@ -24,8 +24,10 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
     });
 
-    // --- LÓGICA DE CÁLCULO CORREGIDA PARA LADRILLOS SIMPLES ---
+    // --- LÓGICA DE CÁLCULO FINAL Y CORREGIDA PARA LADRILLOS SIMPLES ---
+    
     // 1. Calcular la altura total de los bordes verticales de las aberturas.
+    //    Cada abertura tiene 2 bordes verticales.
     let totalOpeningVerticalJambsHeight = 0;
     walls.forEach(wall => {
       wall.openings?.forEach(opening => {
@@ -34,10 +36,10 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
     });
 
     // 2. Calcular la altura total de las terminaciones de pared.
-    //    Si numTerminations es 0, esto será 0.
+    //    Si el usuario ingresa 0 terminaciones, este valor será 0.
     const totalTerminationHeight = numTerminations * maxWallHeight;
 
-    // 3. Sumar todas las longitudes verticales que necesitan ladrillos simples.
+    // 3. Sumar AMBAS longitudes verticales. Esta es la longitud total que necesita ladrillos simples.
     const totalVerticalLengthForSimpleBricks = totalTerminationHeight + totalOpeningVerticalJambsHeight;
 
     // 4. Aplicar la fórmula (longitud / alto del ladrillo) para obtener el total de ladrillos.
@@ -115,7 +117,6 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
           )}
 
           {/* Ladrillos Simples */}
-          {/* Esta sección ahora solo se mostrará si el cálculo es mayor a 0 */}
           {calculations.singleBricksPacks > 0 && (
             <div className="p-4 border rounded-lg">
               <p className="font-semibold">Ladrillos Simples (de terminación)</p>
