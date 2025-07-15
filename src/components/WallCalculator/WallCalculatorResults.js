@@ -19,25 +19,36 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
     let totalNetArea = 0;
     let totalPerimeter = 0;
     let maxWallHeight = 0;
-    let totalOpeningVerticalJambsHeight = 0; // Altura total de los bordes verticales de las aberturas
 
     walls.forEach(wall => {
       totalNetArea += calculateWallArea(wall);
       totalPerimeter += (parseFloat(wall.width) || 0);
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
-      // Sumamos la altura de ambos lados verticales de cada abertura
+    });
+
+    // --- LÓGICA DE CÁLCULO CORREGIDA PARA LADRILLOS SIMPLES ---
+    // Se aplica la fórmula: (Altura Total / 0.08)
+
+    // 1. Calcular la altura total de los bordes verticales de las aberturas.
+    //    Cada abertura tiene 2 bordes verticales.
+    let totalOpeningVerticalJambsHeight = 0;
+    walls.forEach(wall => {
       wall.openings?.forEach(opening => {
         totalOpeningVerticalJambsHeight += (parseFloat(opening.height) || 0) * 2;
       });
     });
 
-    // --- NUEVA LÓGICA DE CÁLCULO PARA LADRILLOS SIMPLES ---
-    // Se calculan los ladrillos necesarios para los extremos de pared expuestos.
-    const terminationBricksHeight = numTerminations * maxWallHeight;
-    // Se calculan los ladrillos para los bordes de las aberturas.
-    const openingJambsBricks = totalOpeningVerticalJambsHeight / config.BRICK_DIMENSIONS.SINGLE.width;
-    // Ladrillos simples totales necesarios (sin procesar).
-    const rawSingleBricks = (terminationBricksHeight / config.BRICK_DIMENSIONS.SINGLE.width) + openingJambsBricks;
+    // 2. Calcular la altura total de las terminaciones de pared.
+    const totalTerminationHeight = numTerminations * maxWallHeight;
+
+    // 3. Aplicar la fórmula (altura / 0.08) para cada parte.
+    //    config.BRICK_DIMENSIONS.SINGLE.width es 0.08
+    const terminationBricks = totalTerminationHeight / config.BRICK_DIMENSIONS.SINGLE.width;
+    const openingBricks = totalOpeningVerticalJambsHeight / config.BRICK_DIMENSIONS.SINGLE.width;
+
+    // 4. Sumar todo para obtener el total de ladrillos simples necesarios.
+    const rawSingleBricks = terminationBricks + openingBricks;
+
 
     // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
@@ -67,9 +78,9 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
       pgu100Profiles,
       escuadras,
     };
-  }, [walls, numTerminations]); // Añadimos numTerminations a las dependencias del cálculo
+  }, [walls, numTerminations]);
 
-  // --- RENDERIZADO DEL COMPONENTE ---
+  // --- RENDERIZADO DEL COMPONENTE (sin cambios en esta sección) ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
