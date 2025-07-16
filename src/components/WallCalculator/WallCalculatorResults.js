@@ -26,23 +26,22 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
 
     // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TU CORRECCIÓN) ---
     
-    // 1. Calcular la longitud vertical total de los bordes de las aberturas.
-    let totalOpeningVerticalJambsHeight = 0;
+    // 1. Calcular ladrillos para las terminaciones.
+    //    La fórmula directa (Altura / 0.08) ya considera los dos extremos.
+    //    Solo se calcula si hay terminaciones.
+    const terminationBricks = numTerminations > 0 ? (maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height) : 0;
+
+    // 2. Calcular ladrillos para las aberturas.
+    //    La fórmula directa (Altura / 0.08) ya considera los dos lados de la abertura.
+    let openingBricks = 0;
     walls.forEach(wall => {
       wall.openings?.forEach(opening => {
-        totalOpeningVerticalJambsHeight += (parseFloat(opening.height) || 0) * 2; // Ambos lados de la abertura
+        openingBricks += (parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.height;
       });
     });
 
-    // 2. Calcular la longitud vertical total de las terminaciones de pared.
-    const totalTerminationHeight = numTerminations * maxWallHeight;
-
-    // 3. Sumar AMBAS longitudes verticales. Esta es la longitud total que necesita ladrillos simples.
-    const totalVerticalLengthForSimpleBricks = totalTerminationHeight + totalOpeningVerticalJambsHeight;
-
-    // 4. Aplicar la fórmula directa y correcta: (Longitud Total / Alto del Ladrillo)
-    //    Mi error anterior fue complicar esto. Tu fórmula simple es la correcta.
-    const rawSingleBricks = totalVerticalLengthForSimpleBricks / config.BRICK_DIMENSIONS.SINGLE.height;
+    // 3. Sumar ambos para obtener el total de ladrillos simples necesarios.
+    const rawSingleBricks = terminationBricks + openingBricks;
 
     // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
