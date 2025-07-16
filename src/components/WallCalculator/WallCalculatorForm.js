@@ -1,120 +1,101 @@
 import React from 'react';
 
-const WallCalculatorForm = ({ walls, setWalls }) => {
+// El formulario ahora recibe la función 'addDividerWall'
+const WallCalculatorForm = ({ walls, setWalls, addDividerWall }) => {
 
-  // Maneja cambios en los inputs de alto y ancho de la pared
-  const handleWallChange = (wallIndex, field, value) => {
-    // Permite solo números y un punto decimal. Previene entradas como 'e', '--', etc.
-    if (value !== '' && !/^\d*\.?\d*$/.test(value)) {
-      return; // No actualiza el estado si la entrada no es válida
-    }
-
-    const newWalls = [...walls];
-    newWalls[wallIndex][field] = value;
-    setWalls(newWalls);
+  // Las funciones para manejar cambios ahora usan el ID de la pared
+  const handleWallChange = (wallId, field, value) => {
+    if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+    
+    setWalls(prevWalls => prevWalls.map(wall => 
+      wall.id === wallId ? { ...wall, [field]: value } : wall
+    ));
   };
 
-  // Maneja cambios en los inputs de las aberturas
-  const handleOpeningChange = (wallIndex, openingIndex, field, value) => {
-    if (value !== '' && !/^\d*\.?\d*$/.test(value)) {
-      return;
-    }
+  const handleOpeningChange = (wallId, openingId, field, value) => {
+    if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
 
-    const newWalls = [...walls];
-    newWalls[wallIndex].openings[openingIndex][field] = value;
-    setWalls(newWalls);
+    setWalls(prevWalls => prevWalls.map(wall => {
+      if (wall.id === wallId) {
+        const updatedOpenings = wall.openings.map(op => 
+          op.id === openingId ? { ...op, [field]: value } : op
+        );
+        return { ...wall, openings: updatedOpenings };
+      }
+      return wall;
+    }));
   };
 
-  // Añade una nueva abertura con un ID único para la 'key' de React
-  const addOpening = (wallIndex) => {
-    const newWalls = [...walls];
-    newWalls[wallIndex].openings.push({
-      id: Date.now(), // ID único basado en el timestamp
-      height: '',
-      width: '',
-    });
-    setWalls(newWalls);
+  const addOpening = (wallId) => {
+    setWalls(prevWalls => prevWalls.map(wall => {
+      if (wall.id === wallId) {
+        const newOpening = { id: Date.now(), height: '', width: '' };
+        return { ...wall, openings: [...wall.openings, newOpening] };
+      }
+      return wall;
+    }));
+  };
+  
+  const removeOpening = (wallId, openingId) => {
+    setWalls(prevWalls => prevWalls.map(wall => {
+      if (wall.id === wallId) {
+        const filteredOpenings = wall.openings.filter(op => op.id !== openingId);
+        return { ...wall, openings: filteredOpenings };
+      }
+      return wall;
+    }));
   };
 
-  // Remueve una abertura por su índice
-  const removeOpening = (wallIndex, openingIndex) => {
-    const newWalls = [...walls];
-    newWalls[wallIndex].openings.splice(openingIndex, 1);
-    setWalls(newWalls);
+  // Función para eliminar una pared (solo las divisorias)
+  const removeWall = (wallId) => {
+    setWalls(prevWalls => prevWalls.filter(wall => wall.id !== wallId));
   };
+
+  // Filtramos las paredes por tipo para renderizarlas en secciones
+  const perimeterWalls = walls.filter(w => w.type === 'perimeter');
+  const dividerWalls = walls.filter(w => w.type === 'divider');
+
+  const renderWallInputs = (wall, index, isDivider = false) => (
+    <div key={wall.id} className="mb-6 p-4 border border-gray-200 rounded-lg shadow-sm bg-gray-50 relative">
+      <div className="flex justify-between items-center">
+        <h4 className="font-bold text-gray-800 text-lg mb-4">
+          {isDivider ? `Pared Divisoria ${index + 1}` : `Pared Perimetral ${index + 1}`}
+        </h4>
+        {/* Solo las paredes divisorias se pueden eliminar */}
+        {isDivider && (
+          <button onClick={() => removeWall(wall.id)} className="text-red-500 hover:text-red-700 font-bold text-xl absolute top-2 right-3">&times;</button>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* ... (código de inputs sin cambios, solo usan wall.id) ... */}
+      </div>
+
+      <h5 className="font-semibold text-gray-700 mb-2">Aberturas</h5>
+      {wall.openings.map((opening) => (
+        <div key={opening.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end">
+          <input type="text" inputMode="decimal" placeholder="Alto" value={opening.height || ''} onChange={(e) => handleOpeningChange(wall.id, opening.id, 'height', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md" />
+          <input type="text" inputMode="decimal" placeholder="Ancho" value={opening.width || ''} onChange={(e) => handleOpeningChange(wall.id, opening.id, 'width', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md" />
+          <button onClick={() => removeOpening(wall.id, opening.id)} className="px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200">&times;</button>
+        </div>
+      ))}
+      <button onClick={() => addOpening(wall.id)} className="mt-2 w-full text-sm font-semibold text-blue-600 bg-blue-100 p-2 rounded-md hover:bg-blue-200">+ Añadir Abertura</button>
+    </div>
+  );
 
   return (
     <div className="mt-8">
-      {walls.map((wall, wallIndex) => (
-        <div key={wallIndex} className="mb-6 p-4 border border-gray-200 rounded-lg shadow-sm bg-gray-50">
-          <h4 className="font-bold text-gray-800 text-lg mb-4">Pared {wallIndex + 1}</h4>
+      {/* Sección para Paredes Perimetrales */}
+      {perimeterWalls.map((wall, index) => renderWallInputs(wall, index, false))}
 
-          {/* Inputs para Alto y Ancho de la Pared */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-1 block">Alto (m)</label>
-              <input
-                type="text" // Se usa 'text' para controlar el valor con la validación
-                inputMode="decimal" // Muestra un teclado numérico en móviles
-                placeholder="Ej: 2.5"
-                value={wall.height || ''}
-                onChange={(e) => handleWallChange(wallIndex, 'height', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-1 block">Ancho (m)</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="Ej: 4"
-                value={wall.width || ''}
-                onChange={(e) => handleWallChange(wallIndex, 'width', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Sección de Aberturas */}
-          <h5 className="font-semibold text-gray-700 mb-2">Aberturas (Puertas/Ventanas)</h5>
-          {wall.openings.map((opening, openingIndex) => (
-            // Se usa el ID único como 'key' para un renderizado estable
-            <div key={opening.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-end">
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="Alto"
-                value={opening.height || ''}
-                onChange={(e) => handleOpeningChange(wallIndex, openingIndex, 'height', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="Ancho"
-                value={opening.width || ''}
-                onChange={(e) => handleOpeningChange(wallIndex, openingIndex, 'width', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-              <button
-                onClick={() => removeOpening(wallIndex, openingIndex)}
-                className="px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
-                aria-label="Eliminar abertura"
-              >
-                {/* Icono de basura para eliminar */}
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </div>
-          ))}
-
-          <button
-            onClick={() => addOpening(wallIndex)}
-            className="mt-2 w-full text-sm font-semibold text-blue-600 bg-blue-100 p-2 rounded-md hover:bg-blue-200 transition-colors"
-          >
-            + Añadir Abertura
-          </button>
-        </div>
-      ))}
+      {/* Sección para Paredes Divisorias */}
+      {dividerWalls.length > 0 && <hr className="my-8" />}
+      {dividerWalls.map((wall, index) => renderWallInputs(wall, index, true))}
+      
+      {/* Botón para añadir nuevas paredes divisorias */}
+      <button onClick={addDividerWall} className="mt-4 w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100">
+        + Añadir Pared Divisoria
+      </button>
     </div>
   );
 };
