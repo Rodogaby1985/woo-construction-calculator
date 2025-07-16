@@ -1,21 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import * as config from '../../config';
 
-// El componente ahora recibe 'layoutType' para determinar las terminaciones del perímetro
 const WallCalculatorResults = ({ walls, layoutType }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
   const calculations = useMemo(() => {
-    // --- LÓGICA AUTOMÁTICA DE TERMINACIONES MEJORADA ---
-    
-    // 1. Calcular terminaciones del perímetro
+    // --- LÓGICA AUTOMÁTICA DE TERMINACIONES ---
     const perimeterTerminationsMap = { 'single': 2, 'L': 2, 'U': 2, 'square': 0 };
-    let numTerminations = perimeterTerminationsMap[layoutType] !== undefined ? perimeterTerminationsMap[layoutType] : 2;
-
-    // 2. Sumar las terminaciones de las paredes divisorias (cada una siempre tiene 2)
     const dividerWalls = walls.filter(wall => wall.type === 'divider');
-    numTerminations += dividerWalls.length * 2;
+    const numTerminations = (perimeterTerminationsMap[layoutType] ?? 2) + (dividerWalls.length * 2);
 
     const calculateWallArea = (wall) => {
       const wallArea = (parseFloat(wall.height) || 0) * (parseFloat(wall.width) || 0);
@@ -28,26 +22,33 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
     let totalNetArea = 0;
     let totalPerimeter = 0;
     let maxWallHeight = 0;
-    let totalOpeningHeightSum = 0;
 
     walls.forEach(wall => {
       totalNetArea += calculateWallArea(wall);
       totalPerimeter += (parseFloat(wall.width) || 0);
-      const wallHeight = parseFloat(wall.height) || 0;
-      maxWallHeight = Math.max(maxWallHeight, wallHeight);
-      
+      maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
+    });
+
+    // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TU CORRECCIÓN) ---
+    
+    // 1. Calcular ladrillos para las terminaciones.
+    //    La fórmula directa (Altura / 0.08) se aplica por cada terminación.
+    const terminationBricks = numTerminations * (maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height);
+
+    // 2. Calcular ladrillos para las aberturas.
+    //    La fórmula directa (Altura / 0.08) se aplica por cada abertura.
+    let openingBricks = 0;
+    walls.forEach(wall => {
       wall.openings?.forEach(opening => {
-        totalOpeningHeightSum += (parseFloat(opening.height) || 0);
+        // **CORRECCIÓN APLICADA AQUÍ:** Ya no se multiplica la altura por 2.
+        openingBricks += (parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.height;
       });
     });
 
-    // --- LÓGICA DE CÁLCULO DE LADRILLOS SIMPLES (USA EL 'numTerminations' AUTOMÁTICO) ---
-    const totalOpeningVerticalJambsHeight = totalOpeningHeightSum * 2;
-    const totalTerminationHeight = numTerminations * maxWallHeight;
-    const totalVerticalLengthForSimpleBricks = totalTerminationHeight + totalOpeningVerticalJambsHeight;
-    const rawSingleBricks = totalVerticalLengthForSimpleBricks / config.BRICK_DIMENSIONS.SINGLE.height;
+    // 3. Sumar ambos para obtener el total de ladrillos simples necesarios.
+    const rawSingleBricks = terminationBricks + openingBricks;
 
-    // --- CÁLCULOS FINALES (sin cambios) ---
+    // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
     const roundedM2 = Math.round(areaWithWaste);
     const doubleBricksM2_to_sell = Math.max(roundedM2, Math.ceil(totalNetArea));
@@ -75,9 +76,9 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
       pgu100Profiles,
       escuadras,
     };
-  }, [walls, layoutType]); // Se actualiza la dependencia a 'layoutType'
+  }, [walls, layoutType]);
 
-  // --- RENDERIZADO DEL COMPONENTE (sin cambios) ---
+  // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <div className="p-6 sm:p-8">
       <h3 className="text-xl font-semibold mb-4 text-gray-800">Resultados del Cálculo</h3>
