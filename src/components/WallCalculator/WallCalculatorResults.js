@@ -24,26 +24,25 @@ const WallCalculatorResults = ({ walls, numTerminations }) => {
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
     });
 
-    // --- LÓGICA DE CÁLCULO FINAL Y CORREGIDA PARA LADRILLOS SIMPLES ---
+    // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TU CORRECCIÓN) ---
     
-    // 1. Calcular ladrillos para las terminaciones de pared.
-    //    Se calcula el número de filas (altura / alto de ladrillo).
-    //    Solo la mitad de las filas necesita un ladrillo simple de relleno.
-    const terminationRows = maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height;
-    const terminationBricks = numTerminations * (terminationRows / 2);
-
-    // 2. Calcular ladrillos para los bordes de las aberturas.
-    //    Un borde de abertura es una línea vertical recta, por lo que necesita un ladrillo por fila.
+    // 1. Calcular la altura total de los bordes verticales de las aberturas.
     let totalOpeningVerticalJambsHeight = 0;
     walls.forEach(wall => {
       wall.openings?.forEach(opening => {
         totalOpeningVerticalJambsHeight += (parseFloat(opening.height) || 0) * 2; // Ambos lados de la abertura
       });
     });
-    const openingBricks = totalOpeningVerticalJambsHeight / config.BRICK_DIMENSIONS.SINGLE.height;
 
-    // 3. Sumar ambos para obtener el total de ladrillos simples necesarios.
-    const rawSingleBricks = terminationBricks + openingBricks;
+    // 2. Calcular la altura total de las terminaciones de pared.
+    const totalTerminationHeight = numTerminations * maxWallHeight;
+
+    // 3. Sumar AMBAS longitudes verticales. Esta es la longitud total que necesita ladrillos simples.
+    const totalVerticalLengthForSimpleBricks = totalTerminationHeight + totalOpeningVerticalJambsHeight;
+
+    // 4. Aplicar la fórmula directa y correcta: (Longitud Total / Alto del Ladrillo)
+    //    Ya no se divide por 2 en ningún lado.
+    const rawSingleBricks = totalVerticalLengthForSimpleBricks / config.BRICK_DIMENSIONS.SINGLE.height;
 
     // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
