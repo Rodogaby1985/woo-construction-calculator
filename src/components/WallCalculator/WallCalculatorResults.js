@@ -32,15 +32,14 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
     // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TU CORRECCIÓN) ---
     
     // 1. Calcular ladrillos para las terminaciones.
-    //    La fórmula directa (Altura / 0.08) se aplica por cada terminación.
-    const terminationBricks = numTerminations * (maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height);
+    //    Si hay terminaciones (numTerminations > 0), se aplica la fórmula una vez.
+    const terminationBricks = numTerminations > 0 ? (maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height) : 0;
 
     // 2. Calcular ladrillos para las aberturas.
-    //    La fórmula directa (Altura / 0.08) se aplica por cada abertura.
+    //    Se aplica la fórmula por cada abertura.
     let openingBricks = 0;
     walls.forEach(wall => {
       wall.openings?.forEach(opening => {
-        // **CORRECCIÓN APLICADA AQUÍ:** Ya no se multiplica la altura por 2.
         openingBricks += (parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.height;
       });
     });
