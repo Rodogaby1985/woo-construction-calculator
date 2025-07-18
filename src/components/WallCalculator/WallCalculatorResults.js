@@ -6,11 +6,6 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
 
   const calculations = useMemo(() => {
-    // --- LÓGICA AUTOMÁTICA DE TERMINACIONES ---
-    const perimeterTerminationsMap = { 'single': 2, 'L': 2, 'U': 2, 'square': 0 };
-    const dividerWalls = walls.filter(wall => wall.type === 'divider');
-    const numTerminations = (perimeterTerminationsMap[layoutType] ?? 2) + (dividerWalls.length * 2);
-
     const calculateWallArea = (wall) => {
       const wallArea = (parseFloat(wall.height) || 0) * (parseFloat(wall.width) || 0);
       const openingsArea = wall.openings?.reduce((total, opening) => {
@@ -29,23 +24,31 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
     });
 
-    // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TU CORRECCIÓN) ---
+    // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TUS REGLAS) ---
     
-    // 1. Calcular ladrillos para las terminaciones.
-    //    Si hay terminaciones (numTerminations > 0), se aplica la fórmula una vez.
-    const terminationBricks = numTerminations > 0 ? (maxWallHeight / config.BRICK_DIMENSIONS.SINGLE.height) : 0;
+    let rawSingleBricks = 0;
+    const brickHeight = config.BRICK_DIMENSIONS.SINGLE.height;
 
-    // 2. Calcular ladrillos para las aberturas.
-    //    Se aplica la fórmula por cada abertura.
-    let openingBricks = 0;
-    walls.forEach(wall => {
-      wall.openings?.forEach(opening => {
-        openingBricks += (parseFloat(opening.height) || 0) / config.BRICK_DIMENSIONS.SINGLE.height;
-      });
+    // 1. Calcular ladrillos para el PERÍMETRO.
+    //    Solo se aplica para formas de 1, 2 o 3 paredes.
+    if (layoutType === 'single' || layoutType === 'L' || layoutType === 'U') {
+      rawSingleBricks += maxWallHeight / brickHeight;
+    }
+
+    // 2. Calcular ladrillos para las PAREDES DIVISORIAS.
+    //    Cada pared divisoria se calcula con su propia altura.
+    const dividerWalls = walls.filter(wall => wall.type === 'divider');
+    dividerWalls.forEach(divider => {
+      const dividerHeight = parseFloat(divider.height) || 0;
+      rawSingleBricks += dividerHeight / brickHeight;
     });
 
-    // 3. Sumar ambos para obtener el total de ladrillos simples necesarios.
-    const rawSingleBricks = terminationBricks + openingBricks;
+    // 3. Calcular ladrillos para las ABERTURAS.
+    walls.forEach(wall => {
+      wall.openings?.forEach(opening => {
+        rawSingleBricks += (parseFloat(opening.height) || 0) / brickHeight;
+      });
+    });
 
     // --- CÁLCULOS FINALES CON DESPERDICIO Y REDONDEO INTELIGENTE ---
     const areaWithWaste = totalNetArea * 1.1;
