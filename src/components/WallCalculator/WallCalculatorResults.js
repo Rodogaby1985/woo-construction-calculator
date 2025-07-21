@@ -5,7 +5,6 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
   const [selectedDoubleBrickColorId, setSelectedDoubleBrickColorId] = useState('');
   const [selectedSingleBrickColorId, setSelectedSingleBrickColorId] = useState('');
   
-  // Nuevo estado para manejar si se incluye o no el desperdicio
   const [includeWaste, setIncludeWaste] = useState(true);
 
   const calculations = useMemo(() => {
@@ -27,16 +26,27 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
       maxWallHeight = Math.max(maxWallHeight, (parseFloat(wall.height) || 0));
     });
 
-    // --- LÓGICA DE CÁLCULO DE LADRILLOS SIMPLES ---
+    // --- LÓGICA DE CÁLCULO FINAL Y SIMPLIFICADA (BASADA EN TUS REGLAS) ---
+    
     let rawSingleBricks = 0;
     const brickHeight = config.BRICK_DIMENSIONS.SINGLE.height;
-    const perimeterTerminationsMap = { 'single': 2, 'L': 2, 'U': 2, 'square': 0 };
-    const dividerWalls = walls.filter(wall => wall.type === 'divider');
-    const numTerminations = (perimeterTerminationsMap[layoutType] ?? 2) + (dividerWalls.length * 2);
-    
-    if (numTerminations > 0) {
-      rawSingleBricks += numTerminations * (maxWallHeight / brickHeight);
+
+    // 1. Calcular ladrillos para el PERÍMETRO.
+    //    Solo se aplica para formas de 1, 2 o 3 paredes.
+    if (layoutType === 'single' || layoutType === 'L' || layoutType === 'U') {
+      rawSingleBricks += maxWallHeight / brickHeight;
     }
+
+    // 2. Calcular ladrillos para las PAREDES DIVISORIAS.
+    //    Cada pared divisoria se calcula con su propia altura.
+    const dividerWalls = walls.filter(wall => wall.type === 'divider');
+    dividerWalls.forEach(divider => {
+      const dividerHeight = parseFloat(divider.height) || 0;
+      // **CORRECCIÓN FINAL:** Ya no se multiplica por 2.
+      rawSingleBricks += dividerHeight / brickHeight;
+    });
+
+    // 3. Calcular ladrillos para las ABERTURAS.
     walls.forEach(wall => {
       wall.openings?.forEach(opening => {
         rawSingleBricks += (parseFloat(opening.height) || 0) / brickHeight;
@@ -45,21 +55,16 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
 
     // --- CÁLCULOS FINALES CON DESPERDICIO OPCIONAL Y PACKS CORRECTOS ---
     const wasteFactor = includeWaste ? 1.1 : 1.0;
-
-    // 1. Ladrillos Dobles (se venden por pack de 60)
+    
     const rawDoubleBricks = totalNetArea * config.DOUBLE_BRICKS_PER_M2;
     const doubleBricksWithWaste = rawDoubleBricks * wasteFactor;
-    // Se redondea SIEMPRE hacia arriba al siguiente pack completo
     const doubleBricksPacks_to_sell = Math.ceil(doubleBricksWithWaste / config.PACK_SIZES.DOUBLE);
     const totalDoubleBricks_for_display = doubleBricksPacks_to_sell * config.PACK_SIZES.DOUBLE;
     
-    // 2. Ladrillos Simples (se venden por pack de 30)
     const singleBricksWithWaste = rawSingleBricks * wasteFactor;
-    // Se redondea SIEMPRE hacia arriba al siguiente pack completo
     const singleBricksPacks_to_sell = Math.ceil(singleBricksWithWaste / config.PACK_SIZES.SINGLE);
     const totalSingleBricks_for_display = singleBricksPacks_to_sell * config.PACK_SIZES.SINGLE;
 
-    // 3. Perfiles y Escuadras
     const pgc70Needed = (totalPerimeter / 0.6) * maxWallHeight;
     const pgc70Profiles = Math.ceil(pgc70Needed / 6);
     const pgu100Profiles = Math.ceil((totalPerimeter * 2) / 6);
@@ -75,7 +80,7 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
       pgu100Profiles,
       escuadras,
     };
-  }, [walls, layoutType, includeWaste]); // Se añade 'includeWaste' a las dependencias
+  }, [walls, layoutType, includeWaste]);
 
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
@@ -93,7 +98,6 @@ const WallCalculatorResults = ({ walls, layoutType }) => {
           </div>
         </div>
 
-        {/* Checkbox para Desperdicio Opcional */}
         <div className="flex items-center justify-center mt-4">
           <input
             id="waste-checkbox"
