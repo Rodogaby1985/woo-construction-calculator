@@ -8,18 +8,19 @@
 
 // Dimensiones de los ladrillos en metros
 export const BRICK_DIMENSIONS = {
-  // **CORRECCIÓN FINAL APLICADA AQUÍ**
-  // Doble: 20cm largo, 8cm alto, 10cm ancho
   DOUBLE: { length: 0.20, height: 0.08, width: 0.10 }, 
-  // Simple: 10cm largo, 8cm alto, 10cm ancho
   SINGLE: { length: 0.10, height: 0.08, width: 0.10 }, 
 };
 
+// **CORRECCIÓN APLICADA AQUÍ**
 // Cantidad de ladrillos por pack de venta
 export const PACK_SIZES = {
-  DOUBLE: 60, // 60 ladrillos dobles por m²
-  SINGLE: 30,
+  DOUBLE: 60,   // Pack de 60 ladrillos dobles
+  SINGLE: 30,   // Pack de 30 ladrillos simples
 };
+
+// Ladrillos dobles necesarios para cubrir 1 metro cuadrado (60 / 0.98)
+export const DOUBLE_BRICKS_PER_M2 = 61.23;
 
 // IDs de las VARIACIONES de producto en WooCommerce
 export const WOOCOMMERCE_IDS = {
